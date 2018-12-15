@@ -136,6 +136,10 @@ public class TrackerService extends Service {
             return lastMarkers;
         }
 
+        public long getTimeTaken(long time) {
+            return time;
+        }
+
         //get how many records for a period of running marked by the marker
         private int getCount(int marker) {
 

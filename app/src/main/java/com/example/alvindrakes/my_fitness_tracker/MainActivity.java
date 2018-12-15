@@ -47,6 +47,8 @@ public class MainActivity extends AppCompatActivity {
     private FloatingActionButton startBtn, stopBtn, detailsBtn, pauseBtn;
     TextView tv_Time;
 
+    public long timeTaken = 0L;
+
     //time recording runnable process
     long MillisecondTime, StartTime, TimeBuff, UpdateTime = 0L;
     int Seconds, Minutes, MilliSeconds;
@@ -141,6 +143,10 @@ public class MainActivity extends AppCompatActivity {
                 Toast.makeText(getApplicationContext(), "Tracker recording stops", Toast.LENGTH_SHORT).show();
                 Log.d(tag, "recording has stopped, current marker: " + MARKER);
 
+                timeTaken = UpdateTime;
+
+                Toast.makeText(MainActivity.this, "timetaken" + timeTaken, Toast.LENGTH_SHORT).show();
+
                 // reset variables value
                 tv_Time.setText("");
 
@@ -172,6 +178,7 @@ public class MainActivity extends AppCompatActivity {
                     for(int i = 0; i < numMarkers; i++) {
                         bundle.putFloatArray("distance " + i, binder.calculateDistances(i+1));
                         bundle.putFloatArray("duration " + i, binder.calculateDurations(i+1));
+                        bundle.putLong("time ", binder.getTimeTaken(UpdateTime));
                     }
 
                     detailsIntent.putExtras(bundle);

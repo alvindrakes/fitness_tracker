@@ -1,9 +1,16 @@
 package com.example.alvindrakes.my_fitness_tracker;
 
+import android.content.Context;
+import android.database.Cursor;
+import android.database.sqlite.SQLiteDatabase;
+import android.graphics.Color;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
+import android.view.Gravity;
 import android.view.View;
+import android.widget.TableLayout;
+import android.widget.TableRow;
 import android.widget.TextView;
 
 import java.util.ArrayList;
@@ -15,9 +22,12 @@ public class DetailsPage extends AppCompatActivity {
     Bundle bundle;
     ArrayList<float[]> allDistances;
     ArrayList<float[]> allDurations;
+    long timeTakenNow;
     int numMarkers;
 
-    TextView avgSpeed, totalDistance, lastDistance, lastAvgSpeed;
+    Context context = this;
+
+    TextView avgSpeed, totalDistance, timeTaken;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -27,30 +37,76 @@ public class DetailsPage extends AppCompatActivity {
 
         bundle = getIntent().getExtras();
         getAllInfo();
-        Log.i(tag,"number of markers: " + numMarkers);
+        Log.i(tag, "number of markers: " + numMarkers);
 
-        avgSpeed = (TextView)findViewById(R.id.AvgSpeed);
-        totalDistance = (TextView)findViewById(R.id.TotalDistance);
+        avgSpeed = (TextView) findViewById(R.id.AvgSpeed);
+        totalDistance = (TextView) findViewById(R.id.TotalDistance);
+       // timeTaken = (TextView) findViewById(R.id.timeTaken);
 
-        lastAvgSpeed = (TextView)findViewById(R.id.LastAvgSpeed);
-        lastDistance = (TextView)findViewById(R.id.LastDistance);
+        MyDBOpenHelper dbHandler = new MyDBOpenHelper(this, null, null, 1);
+
+        TableLayout tableLayout = findViewById(R.id.tablelayout);
 
 
-        //if only one record in the database, there will be no last record
-        if(numMarkers <= 1 ) {
-            lastDistance.setText("    Total distance: No record");
-            lastAvgSpeed.setText("    Average speed: No record");
+        // set data for cardview
+        totalDistance.setText("    Total distance: " + totalDistances(allDistances.get(allDistances.size() - 1)) + "m");
+        avgSpeed.setText("    Average speed: " + avgSpeed(allDistances.get(allDistances.size() - 1), allDurations.get(allDistances.size() - 1)) + " m/s");
+       // timeTaken.setText("     Time Taken: " + timeTakenNow);
 
-        }
-        else {
+        addHeaderRow(tableLayout);
 
-            lastDistance.setText("    Total distance: " + totalDistances(allDistances.get(allDistances.size()-2)) + " m");
-            lastAvgSpeed.setText("    Average speed: " + avgSpeed(allDistances.get(allDistances.size()-2), allDurations.get(allDurations.size()-2)) + " m/s");
-        }
+        SQLiteDatabase db = dbHandler.getReadableDatabase();
 
-        totalDistance.setText("    Total distance: " + totalDistances(allDistances.get(allDistances.size()-1)) + "m");
-        avgSpeed.setText("    Average speed: " + avgSpeed(allDistances.get(allDistances.size()-1), allDurations.get(allDistances.size()-1)) + " m/s");
+        Cursor cursor = db.query("tracker", null, null, null, null, null, null, null);
+
+
+        // So this is the one causing the issue here !!!!!!
+        if (cursor.moveToFirst()) {
+
+                    String runDistance = totalDistances(allDistances.get(allDistances.size() - 1)) + "m";
+                    String runAvgSpeed = avgSpeed(allDistances.get(allDistances.size() - 1), allDurations.get(allDistances.size() - 1)) + " m/s";
+                    String runTime = Long.toString(timeTakenNow);
+
+                    TableRow row = new TableRow(context);
+                    row.setLayoutParams(new TableLayout.LayoutParams(TableLayout.LayoutParams.MATCH_PARENT,
+                            TableLayout.LayoutParams.WRAP_CONTENT));
+
+                    String[] colText = {runDistance, runAvgSpeed, runTime};
+                    for (String text : colText) {
+                        TextView tv = new TextView(this);
+                        tv.setLayoutParams(new TableRow.LayoutParams(TableRow.LayoutParams.WRAP_CONTENT,
+                                TableRow.LayoutParams.WRAP_CONTENT));
+                        tv.setGravity(Gravity.CENTER);
+                        tv.setTextSize(16);
+                        tv.setPadding(5, 5, 5, 5);
+                        tv.setText(text);
+                        row.addView(tv);
+                    }
+                    tableLayout.addView(row);
+                //while (cursor.moveToNext());
+            }
     }
+
+    private void addHeaderRow(TableLayout tableLayout) {
+        TableRow rowHeader = new TableRow(context);
+        rowHeader.setBackgroundColor(Color.parseColor("#5c6298"));
+        rowHeader.setLayoutParams(new TableLayout.LayoutParams(TableLayout.LayoutParams.MATCH_PARENT,
+                TableLayout.LayoutParams.WRAP_CONTENT));
+        String[] headerText = {"Distance", "Average Speed", "Time"};
+        for (String c : headerText) {
+            TextView tv = new TextView(this);
+            tv.setLayoutParams(new TableRow.LayoutParams(TableRow.LayoutParams.WRAP_CONTENT,
+                    TableRow.LayoutParams.WRAP_CONTENT));
+            tv.setGravity(Gravity.CENTER);
+            tv.setTextSize(18);
+            tv.setPadding(5, 8, 5, 8);
+            tv.setText(c);
+            rowHeader.addView(tv);
+        }
+        tableLayout.addView(rowHeader);
+
+    }
+
 
     //get all information sent from main activity
     private void getAllInfo() {
