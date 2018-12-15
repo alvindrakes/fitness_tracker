@@ -14,7 +14,6 @@ import android.os.Binder;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.util.Log;
-import android.widget.Toast;
 
 import com.example.alvindrakes.my_fitness_tracker.ContentProvider.MyProviderContract;
 
@@ -64,7 +63,7 @@ public class TrackerService extends Service {
             return lastMarkers();
         }
 
-        //get all records in the databas for some period of running
+        //get all records in the database for some period of running
         public Location[] getMarkedLocations(int marker) {
 
             int i = 0;
@@ -125,12 +124,6 @@ public class TrackerService extends Service {
             return location;
         }
 
-        //clear all the record in the databases
-        public void DeleteRecords() {
-
-            resolver.delete(MyProviderContract.URI.ID_DELETE, null, null);
-            Toast.makeText(getApplicationContext(), "clear all records", Toast.LENGTH_SHORT).show();
-        }
 
         //get the marker of last record in the database
         public int lastMarkers() {

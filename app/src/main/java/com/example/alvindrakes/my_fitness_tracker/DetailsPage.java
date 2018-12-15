@@ -30,7 +30,7 @@ public class DetailsPage extends AppCompatActivity {
         Log.i(tag,"number of markers: " + numMarkers);
 
         avgSpeed = (TextView)findViewById(R.id.AvgSpeed);
-        totalDistance = (TextView)findViewById(R.id.TotalDistances);
+        totalDistance = (TextView)findViewById(R.id.TotalDistance);
 
         lastAvgSpeed = (TextView)findViewById(R.id.LastAvgSpeed);
         lastDistance = (TextView)findViewById(R.id.LastDistance);
@@ -38,19 +38,18 @@ public class DetailsPage extends AppCompatActivity {
 
         //if only one record in the database, there will be no last record
         if(numMarkers <= 1 ) {
+            lastDistance.setText("    Total distance: No record");
             lastAvgSpeed.setText("    Average speed: No record");
-            lastDistance.setText("    Total distance ran: No record");
+
         }
         else {
 
-            lastDistance.setText("    Total distance ran: " + totalDistances(allDistances.get(allDistances.size()-2)) + "m");
-
-            lastAvgSpeed.setText("    Average speed: " + avgSpeed(allDistances.get(allDistances.size()-2), allDurations.get(allDurations.size()-2)) + "m/s");
+            lastDistance.setText("    Total distance: " + totalDistances(allDistances.get(allDistances.size()-2)) + " m");
+            lastAvgSpeed.setText("    Average speed: " + avgSpeed(allDistances.get(allDistances.size()-2), allDurations.get(allDurations.size()-2)) + " m/s");
         }
 
-        avgSpeed.setText("    Average speed: " + avgSpeed(allDistances.get(allDistances.size()-1), allDurations.get(allDistances.size()-1)) + "m/s");
-
-        totalDistance.setText("    Total distance ran: " + totalDistances(allDistances.get(allDistances.size()-1)) + "m");
+        totalDistance.setText("    Total distance: " + totalDistances(allDistances.get(allDistances.size()-1)) + "m");
+        avgSpeed.setText("    Average speed: " + avgSpeed(allDistances.get(allDistances.size()-1), allDurations.get(allDistances.size()-1)) + " m/s");
     }
 
     //get all information sent from main activity
@@ -70,20 +69,6 @@ public class DetailsPage extends AppCompatActivity {
     private float avgSpeed(float[] distances,float[] durations) {
         return totalDistances(distances) / totalDuration(durations);
     }
-
-    //calculate all speeds at each time stamp
-    private float[] calculateSpeeds(float[] distances,float[] durations) {
-
-        int size = distances.length;
-        float[] speeds = new float[size];
-
-        for(int i = 0; i < size; i++) {
-            speeds[i] = distances[i] / durations[i];
-        }
-
-        return speeds;
-    }
-
 
 
     //get the total move distance
