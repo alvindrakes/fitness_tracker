@@ -20,10 +20,11 @@ public class DetailsPage extends AppCompatActivity {
 
     private final String tag = "TRACKER DETAILS";
 
-    String runDistance;
+    String runDistance, runTimetxt, runSpeedTxt;
     long runTime;
+    float runSpeed;
 
-    TextView avgSpeed, tv_totalDistance, tv_timeTaken;
+    TextView tv_speed, tv_totalDistance, tv_timeTaken;
     Context context = this;
 
     @Override
@@ -32,7 +33,7 @@ public class DetailsPage extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_details_page);
 
-        avgSpeed = (TextView) findViewById(R.id.AvgSpeed);
+        tv_speed = (TextView) findViewById(R.id.Speed);
         tv_totalDistance = (TextView) findViewById(R.id.TotalDistance);
         tv_timeTaken = (TextView) findViewById(R.id.timeTaken);
 
@@ -50,48 +51,7 @@ public class DetailsPage extends AppCompatActivity {
 
         try {
 
-            //get all logs
-            String selectQuery = "SELECT * FROM " + MyDBOpenHelper.TABLE_TRACKERLOG;
-            Cursor cursor = db.rawQuery(selectQuery, null);
-            if (cursor.getCount() > 0) {
-                while (cursor.moveToNext()) {
-
-                    // Read columns data
-                   runDistance  = cursor.getString(cursor.getColumnIndex("distance"));
-                   runTime = cursor.getLong(cursor.getColumnIndex("time"));
-
-                    //format time to string to be displayed
-                    long Seconds = (int) (runTime / 1000);
-                    long Minutes = Seconds / 60;
-                    Seconds = Seconds % 60;
-                    long MilliSeconds = (int) (runTime % 1000);
-                    String runTimetxt = "" + Minutes + ":" + String.format("%02d", Seconds) + ":" + String.format("%03d", MilliSeconds);
-
-                    // data rows information
-                    TableRow row = new TableRow(context);
-                    row.setLayoutParams(new TableLayout.LayoutParams(TableLayout.LayoutParams.MATCH_PARENT,
-                            TableLayout.LayoutParams.WRAP_CONTENT));
-
-                    String[] colText = {runDistance, runTimetxt};
-                    for (String text : colText) {
-                        TextView tv = new TextView(this);
-                        tv.setLayoutParams(new TableRow.LayoutParams(TableRow.LayoutParams.WRAP_CONTENT,
-                                TableRow.LayoutParams.WRAP_CONTENT));
-                        tv.setGravity(Gravity.CENTER);
-                        tv.setTextSize(16);
-                        tv.setPadding(5, 5, 5, 5);
-                        tv.setText(text);
-                        row.addView(tv);
-                    }
-                    tableLayout.addView(row);
-                }
-
-                // set data for cardview
-                tv_totalDistance.setText("    Total distance: " + runDistance);
-                // avgSpeed.setText("    Average speed: " + avgSpeed(allDistances.get(allDistances.size() - 1), allDurations.get(allDistances.size() - 1)) + " m/s");
-                tv_timeTaken.setText("     Time Taken: " + runTime);
-            }
-            db.setTransactionSuccessful();
+            getLogsDB(tableLayout, db);
 
         } catch (SQLiteException e) {
             e.printStackTrace();
@@ -104,30 +64,78 @@ public class DetailsPage extends AppCompatActivity {
         }
     }
 
+    private void getLogsDB(TableLayout tableLayout, SQLiteDatabase db) {
+        //get all logs
+        String selectQuery = "SELECT * FROM " + MyDBOpenHelper.TABLE_TRACKERLOG;
+        Cursor cursor = db.rawQuery(selectQuery, null);
+        if (cursor.getCount() > 0) {
+            while (cursor.moveToNext()) {
+
+                // Read columns data
+                runDistance  = cursor.getString(cursor.getColumnIndex("distance"));
+                runTime = cursor.getLong(cursor.getColumnIndex("time"));
+                //runSpeed = cursor.getFloat(cursor.getColumnIndex("speed"));
+
+                formatTime();
+              //  formatSpeed();
+
+                // data rows information
+                TableRow row = new TableRow(context);
+                row.setLayoutParams(new TableLayout.LayoutParams(TableLayout.LayoutParams.MATCH_PARENT,
+                        TableLayout.LayoutParams.WRAP_CONTENT));
+
+                String[] colText = {runDistance, runSpeedTxt, runTimetxt};
+                for (String text : colText) {
+                    TextView tv = new TextView(this);
+                    tv.setLayoutParams(new TableRow.LayoutParams(TableRow.LayoutParams.WRAP_CONTENT,
+                            TableRow.LayoutParams.WRAP_CONTENT));
+                    tv.setGravity(Gravity.CENTER);
+                    tv.setTextSize(16);
+                    tv.setPadding(5, 5, 5, 5);
+                    tv.setText(text);
+                    row.addView(tv);
+                }
+                tableLayout.addView(row);
+            }
+
+            // set data for cardview's textview
+            tv_totalDistance.setText("    Total distance: " + runDistance);
+            tv_timeTaken.setText("     Time Taken: " + runTimetxt);
+            //tv_speed.setText("     Speed: " + runSpeedTxt);
+        }
+        db.setTransactionSuccessful();
+    }
+
+    private void formatTime () {
+        long Seconds = (int) (runTime / 1000);
+        long Minutes = Seconds / 60;
+        Seconds = Seconds % 60;
+        long MilliSeconds = (int) (runTime % 1000);
+        runTimetxt = "" + Minutes + ":" + String.format("%02d", Seconds) + ":" + String.format("%03d", MilliSeconds);
+    }
+
+//    private void formatSpeed() {
+//        runSpeedTxt = String.format("%0.2f m/s", runSpeed);
+//    }
+
     private void addHeaderRow(TableLayout tableLayout) {
         TableRow rowHeader = new TableRow(context);
-        rowHeader.setBackgroundColor(Color.parseColor("#5c6298"));
+        rowHeader.setBackgroundColor(Color.parseColor("#0d4db6"));
         rowHeader.setLayoutParams(new TableLayout.LayoutParams(TableLayout.LayoutParams.MATCH_PARENT,
                 TableLayout.LayoutParams.WRAP_CONTENT));
-        String[] headerText = {"Distance", "Average Speed", "Time"};
+        String[] headerText = {"Distance", "Speed", "Time"};
         for (String c : headerText) {
             TextView tv = new TextView(this);
             tv.setLayoutParams(new TableRow.LayoutParams(TableRow.LayoutParams.WRAP_CONTENT,
                     TableRow.LayoutParams.WRAP_CONTENT));
             tv.setGravity(Gravity.CENTER);
             tv.setTextSize(18);
-            tv.setPadding(5, 8, 5, 8);
+            tv.setPadding(5, 10, 5, 10);
             tv.setText(c);
             rowHeader.addView(tv);
         }
         tableLayout.addView(rowHeader);
     }
-
-
-    //calculate average speed
-//    private float avgSpeed(float[] distances,float[] durations) {
-//        return totalDistances(distances) / totalDuration(durations);
-//    }
 
 
     // destroy detailsPage activity and go back to mainPage

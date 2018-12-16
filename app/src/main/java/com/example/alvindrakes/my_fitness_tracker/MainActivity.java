@@ -51,10 +51,11 @@ public class MainActivity extends AppCompatActivity {
     Boolean isTracking = false;
     Boolean isActive = false;
 
-    private FloatingActionButton startBtn, stopBtn, detailsBtn, pauseBtn;
-    TextView tv_Time, tv_Distance;
+    private Button detailsBtn;
+    private FloatingActionButton startBtn, stopBtn, pauseBtn;
+    TextView tv_Time, tv_Distance, welcomeMsg;
 
-    Location location, oLocation;
+    Location location, oriLocation;
     float distanceTaken, totalDistance = (float) 0.00;
 
 
@@ -111,15 +112,19 @@ public class MainActivity extends AppCompatActivity {
         startBtn = (FloatingActionButton) findViewById(R.id.start);
         pauseBtn = (FloatingActionButton) findViewById(R.id.pause);
         stopBtn = (FloatingActionButton) findViewById(R.id.stop);
-        detailsBtn = (FloatingActionButton) findViewById(R.id.details);
+        detailsBtn = (Button) findViewById(R.id.details);
+
         tv_Time = findViewById(R.id.tv_Time);
         tv_Distance = findViewById(R.id.tv_Distance);
+        welcomeMsg = findViewById(R.id.welcomeMsg);
 
         handler = new Handler();
         intent = new Intent(this, TrackerService.class);
 
+        // set the visibility of buttons and textview
         stopBtn.hide();
         pauseBtn.hide();
+        welcomeMsg.setEnabled(true);
 
         startBtn.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -132,9 +137,12 @@ public class MainActivity extends AppCompatActivity {
                 stopBtn.show();
                 pauseBtn.show();
 
-                //if not paused
+                if (welcomeMsg.getVisibility() == View.VISIBLE)
+                    welcomeMsg.setVisibility(View.INVISIBLE);
+
+
                 if (!isActive) {
-                    tv_Distance.setText("0.00m"); //if starting new log, reset distance textView
+                    tv_Distance.setText("Distance ran: 0.00m"); //if starting new log, reset distance textView
                     isActive = true; //set status to ACTIVE (currently tracking)
                 }
 
@@ -142,7 +150,7 @@ public class MainActivity extends AppCompatActivity {
                 Toast.makeText(getApplicationContext(), "Tracker recording starts", Toast.LENGTH_SHORT).show();
                 Log.d(tag, "recording has started");
                 createNotification();
-                oLocation = location; //set start location to current location
+                oriLocation = location; //set start location to current location
             }
         });
 
@@ -172,10 +180,11 @@ public class MainActivity extends AppCompatActivity {
                 pauseBtn.hide();
                 stopBtn.hide();
 
-                MyDBOpenHelper dbHandler = new MyDBOpenHelper(getBaseContext(), null, null, 1); //call database helper
-                TrackerLog trackerLog = new TrackerLog(tv_Distance.getText().toString(), UpdateTime); //create new record TrackerLog
-                dbHandler.addLog(trackerLog); //add new log to database
-                Log.d(tag, "Log saved");
+                if (welcomeMsg.getVisibility() == View.INVISIBLE)
+                    welcomeMsg.setVisibility(View.VISIBLE);
+
+
+                addNewLog();
 
                 // reset variables value
                 tv_Time.setText("");
@@ -203,6 +212,15 @@ public class MainActivity extends AppCompatActivity {
             }
         });
     }
+
+    // add new log data into database
+    private void addNewLog() {
+        MyDBOpenHelper dbHandler = new MyDBOpenHelper(getBaseContext(), null, null, 1); //call database helper
+        TrackerLog trackerLog = new TrackerLog( String.format("%.2f m", totalDistance), UpdateTime); //create new record TrackerLog
+        dbHandler.addLog(trackerLog); //add new log to database
+        Log.d(tag, "Log saved");
+    }
+
 
     // check whether location permission is granted
     public boolean checkLocationPermission() {
@@ -259,8 +277,28 @@ public class MainActivity extends AppCompatActivity {
                             == PackageManager.PERMISSION_GRANTED) {
                         Toast.makeText(this, "Location permissions granted", Toast.LENGTH_SHORT).show();
 
+                        LocalBroadcastManager.getInstance(this).registerReceiver(
+                                new BroadcastReceiver() {
+                                    @Override
+                                    public void onReceive(Context context, Intent intent) {
+                                        location = intent.getExtras().getParcelable("loc");
+                                        try {
+                                            //if status is TRACKING, calculate new distance and display
+                                            if (isTracking) {
+                                                distanceTaken = oriLocation.distanceTo(location);
+                                                oriLocation = location;
+                                                totalDistance = distanceTaken + totalDistance;
+                                                String distance = String.format("%.2f", totalDistance);
+                                                tv_Distance.setText("Distance ran: " + distance + "m");
+                                            }
+                                        } catch (Exception e) {
+                                        }
+                                    }
+                                }
+                                , new IntentFilter("LocationBroadcastService"));
+                        startService(intent);
                     }
-                                        } else {
+                } else {
 
                     //permission is denied
                     //explain to user and ask permission again
@@ -285,7 +323,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
 
-    //function to send notification
+    // create and update notification based on tracking status
     public void createNotification() {
         Intent intent = getIntent();
         PendingIntent pendingIntent = PendingIntent.getActivity(getApplicationContext(), (int) System.currentTimeMillis(), intent, PendingIntent.FLAG_UPDATE_CURRENT);
@@ -331,11 +369,11 @@ public class MainActivity extends AppCompatActivity {
                             try {
                                 //if status is TRACKING, calculate new distance and display
                                 if (isTracking) {
-                                    distanceTaken = oLocation.distanceTo(location);
-                                    oLocation = location;
+                                    distanceTaken = oriLocation.distanceTo(location);
+                                    oriLocation = location;
                                     totalDistance = distanceTaken + totalDistance;
                                     String distance = String.format("%.2f", totalDistance);
-                                    tv_Distance.setText(distance + "m");
+                                    tv_Distance.setText("Distance ran: " + distance + "m");
                                 }
                             } catch (Exception e) {
                             }
