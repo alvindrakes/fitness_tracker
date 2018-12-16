@@ -2,12 +2,8 @@ package com.example.alvindrakes.my_fitness_tracker;
 
 import android.annotation.SuppressLint;
 import android.app.Service;
-import android.content.ContentResolver;
-import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
-import android.database.Cursor;
-import android.database.sqlite.SQLiteDatabase;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
@@ -17,6 +13,9 @@ import android.os.IBinder;
 import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
 
+/*
+    Service responsible to broadcast updated location info to broadcast receiver
+ */
 public class TrackerService extends Service implements LocationListener {
 
     private final String TAG = "TRACKER SERVICE";
@@ -36,9 +35,8 @@ public class TrackerService extends Service implements LocationListener {
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
 
-        //initialise location manager and listener
-        LocationManager locationManager =
-                (LocationManager) getSystemService(Context.LOCATION_SERVICE);
+        // initialise location manager and listener
+        LocationManager locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
         TrackerService locationListener = new TrackerService();
 
 
@@ -62,7 +60,7 @@ public class TrackerService extends Service implements LocationListener {
         public void onLocationChanged(Location location) {
             Log.d(TAG, "Location changed");
 
-            //broadcast new location
+            // broadcast new location to broadcast receiver in Main Activity
             Intent i = new Intent("LocationBroadcastService");
             i.putExtra("loc", location);
             LocalBroadcastManager.getInstance(this).sendBroadcast(i);

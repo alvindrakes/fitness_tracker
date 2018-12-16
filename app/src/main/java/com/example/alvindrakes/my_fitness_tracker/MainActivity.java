@@ -32,10 +32,15 @@ import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
 
+/*
+    Main page of this fitness tracker app
+    Contains the ability to start, pause and stop fitness tracking
+    Can view all tracking log data when 'tracking log' btn is clicked
+ */
 public class MainActivity extends AppCompatActivity {
 
     //indicate which period of running it is
-    private final String tag = "MAIN TRACKER";
+    private final String TAG = "MAIN TRACKER";
 
     private Intent intent;
     TrackerService trackerService;
@@ -54,21 +59,21 @@ public class MainActivity extends AppCompatActivity {
     float Speed;
 
 
-    //time recording runnable process
+    // time recording runnable process
     long MillisecondTime, StartTime, TimeBuff, UpdateTime = 0L;
     int Seconds, Minutes, MilliSeconds;
     Handler handler;
     public Runnable runnable = new Runnable() {
 
         public void run() {
-            MillisecondTime = SystemClock.uptimeMillis() - StartTime; //update time
-            UpdateTime = TimeBuff + MillisecondTime; //update total time
+            MillisecondTime = SystemClock.uptimeMillis() - StartTime;
+            UpdateTime = TimeBuff + MillisecondTime;
             Seconds = (int) (UpdateTime / 1000);
             Minutes = Seconds / 60;
             Seconds = Seconds % 60;
             MilliSeconds = (int) (UpdateTime % 1000);
 
-            //update time textView
+            // update time textView
             tv_Time.setText("Time taken: " + Minutes + ":"
                     + String.format("%02d", Seconds) + ":"
                     + String.format("%03d", MilliSeconds));
@@ -79,9 +84,10 @@ public class MainActivity extends AppCompatActivity {
     };
 
     private NotificationManager notificationManager;
+
     //ServiceConnection for service
     private ServiceConnection myConnection = new ServiceConnection() {
-        //Bind Service
+        // Bind Service
         @Override
         public void onServiceConnected(ComponentName componentName, IBinder service) {
             TrackerService.mBinder binder = (TrackerService.mBinder) service;
@@ -89,6 +95,7 @@ public class MainActivity extends AppCompatActivity {
             isBound = true;
         }
 
+        // Unbind Service
         @Override
         public void onServiceDisconnected(ComponentName componentName) {
             isBound = false;
@@ -100,8 +107,9 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        //assign notification manager to system if android build version is supported
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            notificationManager = getSystemService(NotificationManager.class); //assign notification manager to system
+            notificationManager = getSystemService(NotificationManager.class);
         }
 
         startBtn = (FloatingActionButton) findViewById(R.id.start);
@@ -126,7 +134,7 @@ public class MainActivity extends AppCompatActivity {
         startBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                StartTime = SystemClock.uptimeMillis(); //get current system uptime
+                StartTime = SystemClock.uptimeMillis(); // get current system uptime
                 handler.postDelayed(runnable, 0);
                 isTracking = true;
 
@@ -134,20 +142,21 @@ public class MainActivity extends AppCompatActivity {
                 stopBtn.show();
                 pauseBtn.show();
 
+                // hide welcome message when start button is pressed
                 if (welcomeMsg.getVisibility() == View.VISIBLE)
                     welcomeMsg.setVisibility(View.INVISIBLE);
 
 
                 if (!isActive) {
-                    tv_Distance.setText("Distance ran: 0.00m"); //reset distance count when restarting
-                    isActive = true; //set status to ACTIVE (currently tracking)
+                    tv_Distance.setText("Distance ran: 0.00m"); // reset distance count when restarting
+                    isActive = true; // set status to ACTIVE (currently tracking)
                 }
 
                 //press start button to connect to the service
                 Toast.makeText(getApplicationContext(), "Tracker recording starts", Toast.LENGTH_SHORT).show();
-                Log.d(tag, "recording has started");
+                Log.d(TAG, "recording has started");
                 createNotification();
-                oriLocation = location; //set start location to current location
+                oriLocation = location; // set starting location to current location
             }
         });
 
@@ -158,10 +167,10 @@ public class MainActivity extends AppCompatActivity {
                stopBtn.show();
                pauseBtn.hide();
 
-               TimeBuff += MillisecondTime; //save time buffer
-               handler.removeCallbacks(runnable); //stop runnable
+               TimeBuff += MillisecondTime; // save time buffer
+               handler.removeCallbacks(runnable); // stop runnable
 
-               isTracking = false; //set status to NOT TRACKING
+               isTracking = false;
                createNotification();
 
                Toast.makeText(getApplicationContext(), "Tracker recording pauses", Toast.LENGTH_SHORT).show();
@@ -171,7 +180,7 @@ public class MainActivity extends AppCompatActivity {
         stopBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                handler.removeCallbacks(runnable); //stop runnable
+                handler.removeCallbacks(runnable); // stop runnable
 
                 startBtn.show();
                 pauseBtn.hide();
@@ -184,6 +193,7 @@ public class MainActivity extends AppCompatActivity {
                 calculateSpeed();
                 addNewLog();
 
+                // show dialog to user on how much time and distance were collected
                 new AlertDialog.Builder(MainActivity.this)
                         .setTitle("Never Give Up!")
                         .setMessage("You have ran "
@@ -200,7 +210,7 @@ public class MainActivity extends AppCompatActivity {
                         .create()
                         .show();
 
-                // reset variables value
+                // reset all variables' value
                 tv_Time.setText("");
                 tv_Distance.setText("");
 
@@ -212,7 +222,7 @@ public class MainActivity extends AppCompatActivity {
                 Minutes = 0;
                 MilliSeconds = 0;
 
-                //set status to NOT TRACKING and NOT ACTIVE
+                // rest TRACKING and ACTIVE status to false
                 isTracking = false;
                 isActive = false;
             }
@@ -232,25 +242,27 @@ public class MainActivity extends AppCompatActivity {
         MyDBOpenHelper dbHandler = new MyDBOpenHelper(getBaseContext(), null, null, 1); //call database helper
         TrackerLog trackerLog = new TrackerLog( String.format("%.2f m", totalDistance), String.format("%.2f", Speed), UpdateTime); //create new record TrackerLog
         dbHandler.addLog(trackerLog); //add new log to database
-        Log.d(tag, "Log saved");
+        Log.d(TAG, "Log saved");
     }
 
     // calculate average speed of the user
     private void calculateSpeed() {
 
-        // formula: speed = distance / time
-        Speed = totalDistance / Seconds;  //
+        /*
+            formula: speed = distance / time
+        */
+        Speed = totalDistance / Seconds;
     }
 
 
     // check whether location permission is granted
     public boolean checkLocationPermission() {
-        //if permission not granted
+        // if permission is not granted
         if (ContextCompat.checkSelfPermission(this,
                 Manifest.permission.ACCESS_FINE_LOCATION)
                 != PackageManager.PERMISSION_GRANTED) {
 
-            //if user already denied permission once before
+            // if user denied permission before
             if (ActivityCompat.shouldShowRequestPermissionRationale(this,
                     Manifest.permission.ACCESS_FINE_LOCATION)) {
 
@@ -275,14 +287,14 @@ public class MainActivity extends AppCompatActivity {
                         new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
                         0);
             }
+            // permission still not granted
             return false;
         } else {
-            //permission already granted
             return true;
         }
     }
 
-    //after permission has been asked
+    // after permission has been asked
     @Override
     public void onRequestPermissionsResult(int requestCode,
                                            String permissions[], int[] grantResults) {
@@ -304,7 +316,7 @@ public class MainActivity extends AppCompatActivity {
                                     public void onReceive(Context context, Intent intent) {
                                         location = intent.getExtras().getParcelable("loc");
                                         try {
-                                            //if status is TRACKING, calculate new distance and display
+                                            // if status is TRACKING, calculate new distance and update tv_distance
                                             if (isTracking) {
                                                 distanceTaken = oriLocation.distanceTo(location);
                                                 oriLocation = location;
@@ -349,12 +361,13 @@ public class MainActivity extends AppCompatActivity {
         Intent intent = getIntent();
         PendingIntent pendingIntent = PendingIntent.getActivity(getApplicationContext(), (int) System.currentTimeMillis(), intent, PendingIntent.FLAG_UPDATE_CURRENT);
 
-        //notification channel created to support android SDK 26+
+        // create notification channel
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             NotificationChannel notificationChannel = new NotificationChannel("runningTracker", "RunningTracker", notificationManager.IMPORTANCE_LOW);
             notificationManager.createNotificationChannel(notificationChannel);
         }
 
+        // show 'paused' text if TRACKING is not true
         Notification notif = new NotificationCompat.Builder(this, "runningTracker")
                 .setSmallIcon(R.drawable.ic_stop_white_24d)
                 .setContentTitle("RunningTracker")
@@ -372,13 +385,13 @@ public class MainActivity extends AppCompatActivity {
     protected void onStart() {
         super.onStart();
 
-        Log.d(tag, "Starting service");
+        Log.d(TAG, "Starting service");
 
-        //bind service
+        // Bind service
         intent = new Intent(this, TrackerService.class);
         bindService(intent, myConnection, Context.BIND_AUTO_CREATE);
 
-        //check if location permission is granted
+        // check if location permission is granted
         if (checkLocationPermission()) {
 
             //Broadcast receiver every time location is updated
@@ -388,7 +401,7 @@ public class MainActivity extends AppCompatActivity {
                         public void onReceive(Context context, Intent intent) {
                             location = intent.getExtras().getParcelable("loc");
                             try {
-                                //if status is TRACKING, calculate new distance and display
+                                //if status is TRACKING, calculate new distance and update tv_distance
                                 if (isTracking) {
                                     distanceTaken = oriLocation.distanceTo(location);
                                     oriLocation = location;
@@ -413,32 +426,32 @@ public class MainActivity extends AppCompatActivity {
         //stop service when activity is destroyed
         stopService(intent);
         handler.removeCallbacks(runnable);
-        Log.d(tag, "onDestroy");
+        Log.d(TAG, "onDestroy");
     }
 
     @Override
     protected void onPause() {
         super.onPause();
-        Log.d(tag, "onPause");
+        Log.d(TAG, "onPause");
     }
 
     @Override
     protected void onResume() {
         super.onResume();
-        Log.d(tag, "onResume");
+        Log.d(TAG, "onResume");
     }
 
 
     @Override
     protected void onStop() {
         super.onStop();
-        Log.d(tag, "onStop");
+        Log.d(TAG, "onStop");
     }
 
     @Override
     public void onBackPressed() {
-        super.onBackPressed();
 
+        super.onBackPressed();
         //do not destroy app when back button is pressed
         moveTaskToBack(true);
     }

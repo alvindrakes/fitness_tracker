@@ -1,11 +1,3 @@
-/*
-Name: Mayur Gunputh
-Date: 11 Dec 2018
-Project: G53MDP Coursework 2
-RunLog.java
-Class storing log details: date, distance and time
- */
-
 package com.example.alvindrakes.my_fitness_tracker;
 
 public class TrackerLog {

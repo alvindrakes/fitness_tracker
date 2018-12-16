@@ -9,6 +9,9 @@ import android.util.Log;
 
 import com.example.alvindrakes.my_fitness_tracker.ContentProvider.MyContentProvider;
 
+/*
+    Create database and specify the column data
+ */
 public class MyDBOpenHelper extends SQLiteOpenHelper {
 
     public static final String TAG = "TrackerLogDB";
@@ -44,6 +47,7 @@ public class MyDBOpenHelper extends SQLiteOpenHelper {
         onCreate(db);
     }
 
+    // function to add new log into database
     public void addLog(TrackerLog trackerlog) {
         ContentValues values = new ContentValues();
         values.put(COLUMN_DISTANCE, trackerlog.getDistance());

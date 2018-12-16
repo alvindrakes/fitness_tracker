@@ -7,18 +7,18 @@ import android.database.sqlite.SQLiteException;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
-import android.util.Log;
 import android.view.Gravity;
 import android.view.View;
 import android.widget.TableLayout;
 import android.widget.TableRow;
 import android.widget.TextView;
 
-import java.util.ArrayList;
+
+/*
+    Activity that has a cardview and table layout that show the tracker data extracted from database
+ */
 
 public class DetailsPage extends AppCompatActivity {
-
-    private final String tag = "TRACKER DETAILS";
 
     String runDistance, runTimetxt, runSpeedTxt;
     long runTime;
@@ -50,22 +50,21 @@ public class DetailsPage extends AppCompatActivity {
         db.beginTransaction();
 
         try {
-
             getLogsDB(tableLayout, db);
 
         } catch (SQLiteException e) {
             e.printStackTrace();
 
         } finally {
-            db.endTransaction();
-            // End the transaction.
-            db.close();
-            // Close database
+            db.endTransaction();   // End the transaction.
+            db.close();   // Close database
         }
     }
 
+
+    //get distance, time, speed data from database
     private void getLogsDB(TableLayout tableLayout, SQLiteDatabase db) {
-        //get all logs
+
         String selectQuery = "SELECT * FROM " + MyDBOpenHelper.TABLE_TRACKERLOG;
         Cursor cursor = db.rawQuery(selectQuery, null);
         if (cursor.getCount() > 0) {
@@ -79,7 +78,7 @@ public class DetailsPage extends AppCompatActivity {
                 formatTime();
                 formatSpeed();
 
-                // data rows information
+                // populate the table rows with data
                 TableRow row = new TableRow(context);
                 row.setLayoutParams(new TableLayout.LayoutParams(TableLayout.LayoutParams.MATCH_PARENT,
                         TableLayout.LayoutParams.WRAP_CONTENT));
@@ -98,7 +97,7 @@ public class DetailsPage extends AppCompatActivity {
                 tableLayout.addView(row);
             }
 
-            // set data for cardview's textview
+            // set data for textview
             tv_totalDistance.setText("    Total distance: " + runDistance);
             tv_timeTaken.setText("     Time Taken: " + runTimetxt);
             tv_speed.setText("     Speed: " + runSpeedTxt);
@@ -106,6 +105,7 @@ public class DetailsPage extends AppCompatActivity {
         db.setTransactionSuccessful();
     }
 
+    // format time variable from Long to String
     private void formatTime () {
         long Seconds = (int) (runTime / 1000);
         long Minutes = Seconds / 60;
@@ -114,10 +114,12 @@ public class DetailsPage extends AppCompatActivity {
         runTimetxt = "" + Minutes + ":" + String.format("%02d", Seconds) + ":" + String.format("%03d", MilliSeconds);
     }
 
+    // format speed variable from Float to String
     private void formatSpeed() {
         runSpeedTxt = String.format("%.2f m/s", runSpeed);
     }
 
+    // add description for the header row in table
     private void addHeaderRow(TableLayout tableLayout) {
         TableRow rowHeader = new TableRow(context);
         rowHeader.setBackgroundColor(Color.parseColor("#0d4db6"));
@@ -138,7 +140,7 @@ public class DetailsPage extends AppCompatActivity {
     }
 
 
-    // destroy detailsPage activity and go back to mainPage
+    // destroy detailsPage activity and go back to main activity
     public void backToMain(View v) {
         finish();
     }

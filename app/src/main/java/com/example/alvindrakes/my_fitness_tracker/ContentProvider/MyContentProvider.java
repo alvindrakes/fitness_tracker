@@ -10,8 +10,12 @@ import android.net.Uri;
 
 import com.example.alvindrakes.my_fitness_tracker.MyDBOpenHelper;
 
+/*
+    Content provider that manage the storing of data in the database
+    Implements the 4 basic function which are insert, query, delete and update
+ */
 public class MyContentProvider extends ContentProvider {
-    public static final int RUNLOGS = 1;
+    public static final int TRACKERLOGS = 1;
     private static final String AUTHORITY = "com.example.alvindrakes.my_fitness_tracker.ContentProvider.MyContentProvider";
     private static final String TABLE_TRACKERLOG = "TrackerLog";
     public static final Uri CONTENT_URI = Uri.parse("content://" + AUTHORITY + "/" + TABLE_TRACKERLOG);
@@ -19,7 +23,7 @@ public class MyContentProvider extends ContentProvider {
     private static final UriMatcher sURIMatcher = new UriMatcher(UriMatcher.NO_MATCH);
 
     static {
-        sURIMatcher.addURI(AUTHORITY, TABLE_TRACKERLOG, RUNLOGS);
+        sURIMatcher.addURI(AUTHORITY, TABLE_TRACKERLOG, TRACKERLOGS);
     }
 
     private MyDBOpenHelper myDB;
@@ -44,9 +48,9 @@ public class MyContentProvider extends ContentProvider {
     public Uri insert(Uri uri, ContentValues values) {
         int uriType = sURIMatcher.match(uri);
         SQLiteDatabase sqlDB = myDB.getWritableDatabase();
-        long id = 0;
+        long id;
         switch (uriType) {
-            case RUNLOGS:
+            case TRACKERLOGS:
                 id = sqlDB.insert(MyDBOpenHelper.TABLE_TRACKERLOG, null, values);
                 break;
 

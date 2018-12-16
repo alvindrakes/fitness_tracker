@@ -76,6 +76,7 @@
         android:layout_marginBottom="8dp"
         android:layout_weight="1"
         android:clickable="true"
+        android:src="@drawable/ic_stop_white_24d"
         app:backgroundTint="@color/design_default_color_primary"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
