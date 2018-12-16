@@ -74,10 +74,10 @@ public class DetailsPage extends AppCompatActivity {
                 // Read columns data
                 runDistance  = cursor.getString(cursor.getColumnIndex("distance"));
                 runTime = cursor.getLong(cursor.getColumnIndex("time"));
-                //runSpeed = cursor.getFloat(cursor.getColumnIndex("speed"));
+                runSpeed = cursor.getFloat(cursor.getColumnIndex("speed"));
 
                 formatTime();
-              //  formatSpeed();
+                formatSpeed();
 
                 // data rows information
                 TableRow row = new TableRow(context);
@@ -101,7 +101,7 @@ public class DetailsPage extends AppCompatActivity {
             // set data for cardview's textview
             tv_totalDistance.setText("    Total distance: " + runDistance);
             tv_timeTaken.setText("     Time Taken: " + runTimetxt);
-            //tv_speed.setText("     Speed: " + runSpeedTxt);
+            tv_speed.setText("     Speed: " + runSpeedTxt);
         }
         db.setTransactionSuccessful();
     }
@@ -114,9 +114,9 @@ public class DetailsPage extends AppCompatActivity {
         runTimetxt = "" + Minutes + ":" + String.format("%02d", Seconds) + ":" + String.format("%03d", MilliSeconds);
     }
 
-//    private void formatSpeed() {
-//        runSpeedTxt = String.format("%0.2f m/s", runSpeed);
-//    }
+    private void formatSpeed() {
+        runSpeedTxt = String.format("%.2f m/s", runSpeed);
+    }
 
     private void addHeaderRow(TableLayout tableLayout) {
         TableRow rowHeader = new TableRow(context);

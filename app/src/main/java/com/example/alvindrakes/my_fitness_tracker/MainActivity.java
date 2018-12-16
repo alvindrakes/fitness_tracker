@@ -58,6 +58,8 @@ public class MainActivity extends AppCompatActivity {
     Location location, oriLocation;
     float distanceTaken, totalDistance = (float) 0.00;
 
+    float Speed, runTime;
+
 
     //time recording runnable process
     long MillisecondTime, StartTime, TimeBuff, UpdateTime = 0L;
@@ -184,6 +186,7 @@ public class MainActivity extends AppCompatActivity {
                     welcomeMsg.setVisibility(View.VISIBLE);
 
 
+                calculateSpeed();
                 addNewLog();
 
                 // reset variables value
@@ -216,9 +219,24 @@ public class MainActivity extends AppCompatActivity {
     // add new log data into database
     private void addNewLog() {
         MyDBOpenHelper dbHandler = new MyDBOpenHelper(getBaseContext(), null, null, 1); //call database helper
-        TrackerLog trackerLog = new TrackerLog( String.format("%.2f m", totalDistance), UpdateTime); //create new record TrackerLog
+        TrackerLog trackerLog = new TrackerLog( String.format("%.2f m", totalDistance), String.format("%.2f", Speed), UpdateTime); //create new record TrackerLog
         dbHandler.addLog(trackerLog); //add new log to database
         Log.d(tag, "Log saved");
+    }
+
+    // calculate average speed of the user
+    private void calculateSpeed() {
+        MyDBOpenHelper dbHandler = new MyDBOpenHelper(getBaseContext(), null, null, 1); //call database helper
+
+        SQLiteDatabase db = dbHandler.getReadableDatabase();
+
+        String selectQuery = "SELECT * FROM " + MyDBOpenHelper.TABLE_TRACKERLOG;
+        Cursor cursor = db.rawQuery(selectQuery, null);
+
+        cursor.moveToLast();
+        runTime = cursor.getLong(cursor.getColumnIndex("time"));
+
+        Speed = totalDistance / runTime;
     }
 
 

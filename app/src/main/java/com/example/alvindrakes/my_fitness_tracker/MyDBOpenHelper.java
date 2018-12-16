@@ -32,8 +32,8 @@ public class MyDBOpenHelper extends SQLiteOpenHelper {
                 TABLE_TRACKERLOG + "("
                 + COLUMN_DISTANCE
                 + " TEXT,"
-//                + COLUMN_SPEED
-//                + " TEXT,"
+                + COLUMN_SPEED
+                + " TEXT,"
                 + COLUMN_TIME + " REAL" + ")";
         db.execSQL(CREATE_TABLE_TRACKERLOG);
     }
@@ -47,7 +47,7 @@ public class MyDBOpenHelper extends SQLiteOpenHelper {
     public void addLog(TrackerLog trackerlog) {
         ContentValues values = new ContentValues();
         values.put(COLUMN_DISTANCE, trackerlog.getDistance());
-       // values.put(COLUMN_SPEED, trackerlog.getSpeed());
+        values.put(COLUMN_SPEED, trackerlog.getSpeed());
         values.put(COLUMN_TIME, trackerlog.getTime());
         myCR.insert(MyContentProvider.CONTENT_URI, values);
         Log.d(TAG, "New log added");
