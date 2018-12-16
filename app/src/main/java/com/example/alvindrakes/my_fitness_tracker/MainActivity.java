@@ -58,7 +58,7 @@ public class MainActivity extends AppCompatActivity {
     Location location, oriLocation;
     float distanceTaken, totalDistance = (float) 0.00;
 
-    float Speed, runTime;
+    float Speed;
 
 
     //time recording runnable process
@@ -226,17 +226,9 @@ public class MainActivity extends AppCompatActivity {
 
     // calculate average speed of the user
     private void calculateSpeed() {
-        MyDBOpenHelper dbHandler = new MyDBOpenHelper(getBaseContext(), null, null, 1); //call database helper
 
-        SQLiteDatabase db = dbHandler.getReadableDatabase();
-
-        String selectQuery = "SELECT * FROM " + MyDBOpenHelper.TABLE_TRACKERLOG;
-        Cursor cursor = db.rawQuery(selectQuery, null);
-
-        cursor.moveToLast();
-        runTime = cursor.getLong(cursor.getColumnIndex("time"));
-
-        Speed = totalDistance / runTime;
+        // formula: speed = distance / time
+        Speed = totalDistance / Seconds;  //
     }
 
 
@@ -267,7 +259,7 @@ public class MainActivity extends AppCompatActivity {
                         .create()
                         .show();
             } else {
-                // location permission asked for the 1st time
+                // location permission asked for the first time
                 ActivityCompat.requestPermissions(this,
                         new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
                         0);
@@ -378,7 +370,7 @@ public class MainActivity extends AppCompatActivity {
         //check if location permission is granted
         if (checkLocationPermission()) {
 
-            //Broadcast receiver everytime location is updated
+            //Broadcast receiver every time location is updated
             LocalBroadcastManager.getInstance(this).registerReceiver(
                     new BroadcastReceiver() {
                         @Override
