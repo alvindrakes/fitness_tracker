@@ -1,91 +1,90 @@
 package com.example.alvindrakes.my_fitness_tracker.ContentProvider;
 
 import android.content.ContentProvider;
-import android.content.ContentUris;
 import android.content.ContentValues;
 import android.content.UriMatcher;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
+import android.database.sqlite.SQLiteQueryBuilder;
 import android.net.Uri;
 
 import com.example.alvindrakes.my_fitness_tracker.MyDBOpenHelper;
 
-
-// Implement basic functions: insert, delete, update, query for database operation
 public class MyContentProvider extends ContentProvider {
-    final static int ID_INSERT = 1;
-    final static int ID_QUERY = 2;
-    final static int ID_UPDATE = 3;
-    final static int ID_DELETE = 4;
+    public static final int RUNLOGS = 1;
+    private static final String AUTHORITY = "com.example.alvindrakes.my_fitness_tracker.ContentProvider.MyContentProvider";
+    private static final String TABLE_TRACKERLOG = "TrackerLog";
+    public static final Uri CONTENT_URI = Uri.parse("content://" + AUTHORITY + "/" + TABLE_TRACKERLOG);
 
-    private static UriMatcher matcher = new UriMatcher(UriMatcher.NO_MATCH);
-    private MyDBOpenHelper dbOpenHelper;
-    private SQLiteDatabase db;
+    private static final UriMatcher sURIMatcher = new UriMatcher(UriMatcher.NO_MATCH);
 
     static {
-        matcher.addURI(MyProviderContract.AUTHORITY, "tracker/insert", ID_INSERT);
-        matcher.addURI(MyProviderContract.AUTHORITY, "tracker/query", ID_QUERY);
-        matcher.addURI(MyProviderContract.AUTHORITY, "tracker/update", ID_UPDATE);
-        matcher.addURI(MyProviderContract.AUTHORITY, "tracker/delete", ID_DELETE);
+        sURIMatcher.addURI(AUTHORITY, TABLE_TRACKERLOG, RUNLOGS);
     }
 
-    @Override
-    public boolean onCreate() {
-        dbOpenHelper = new MyDBOpenHelper(this.getContext(), "my.db", null, 1);
-        return true;
-    }
+    private MyDBOpenHelper myDB;
 
-    @Override
-    public Cursor query(Uri uri, String[] projection, String selection, String[] selectionArgs, String sortOrder) {
-
-        switch(matcher.match(uri)) {
-            case ID_QUERY:
-                db = dbOpenHelper.getReadableDatabase();
-                Cursor cursor = db.query("tracker", projection, selection, selectionArgs, null, null, sortOrder);
-                return cursor;
-            default:
-                throw new IllegalArgumentException("unknown uri " + uri);
-        }
-    }
-
-    @Override
-    public String getType(Uri uri) {
-        return null;
-    }
-
-    @Override
-    public Uri insert(Uri uri, ContentValues values) {
-
-        switch(matcher.match(uri)) {
-            case ID_INSERT:
-                db = dbOpenHelper.getWritableDatabase();
-                long id = db.insert("tracker", null, values);
-                if(id > 0) {
-                    Uri trackerUri = ContentUris.withAppendedId(uri, id);
-                    getContext().getContentResolver().notifyChange(trackerUri, null);
-                    return trackerUri;
-                }
-            default:
-                throw new IllegalArgumentException("unknown uri " + uri);
-        }
+    public MyContentProvider() {
     }
 
     @Override
     public int delete(Uri uri, String selection, String[] selectionArgs) {
-
-        switch(matcher.match(uri)) {
-            case ID_DELETE:
-                db = dbOpenHelper.getWritableDatabase();
-                int id = db.delete("tracker", selection, selectionArgs);
-                getContext().getContentResolver().notifyChange(MyProviderContract.BASE_URI, null);
-                return id;
-            default:
-                throw new IllegalArgumentException("unknown uri " + uri);
-        }
+        // Implement this to handle requests to delete one or more rows.
+        throw new UnsupportedOperationException("Not yet implemented");
     }
 
     @Override
-    public int update(Uri uri, ContentValues values, String selection, String[] selectionArgs) {
-        return 0;
+    public String getType(Uri uri) {
+        // TODO: Implement this to handle requests for the MIME type of the data
+        // at the given URI.
+        throw new UnsupportedOperationException("Not yet implemented");
+    }
+
+    @Override
+    public Uri insert(Uri uri, ContentValues values) {
+        int uriType = sURIMatcher.match(uri);
+        SQLiteDatabase sqlDB = myDB.getWritableDatabase();
+        long id = 0;
+        switch (uriType) {
+            case RUNLOGS:
+                id = sqlDB.insert(MyDBOpenHelper.TABLE_TRACKERLOG, null, values);
+                break;
+
+            default:
+                throw new IllegalArgumentException("Unknown URI: " + uri);
+        }
+        getContext().getContentResolver().notifyChange(uri, null);
+        return Uri.parse(TABLE_TRACKERLOG + "/" + id);
+    }
+
+    @Override
+    public boolean onCreate() {
+        myDB = new MyDBOpenHelper(getContext(), null, null, 1);
+        return false;
+    }
+
+    @Override
+    public Cursor query(Uri uri, String[] projection, String selection,
+                        String[] selectionArgs, String sortOrder) {
+        SQLiteQueryBuilder queryBuilder = new SQLiteQueryBuilder();
+        queryBuilder.setTables(MyDBOpenHelper.TABLE_TRACKERLOG);
+     //   int uriType = sURIMatcher.match(uri);
+//        switch (uriType) {
+//            case RUNLOGS:
+//                queryBuilder.appendWhere(MyDBOpenHelper.COLUMN_DATETIME + "=" + uri.getLastPathSegment());
+//                break;
+//            default:
+//                throw new IllegalArgumentException("Unknown URI");
+//        }
+        Cursor cursor = queryBuilder.query(myDB.getReadableDatabase(), projection, selection, selectionArgs, null, null, sortOrder);
+        cursor.setNotificationUri(getContext().getContentResolver(), uri);
+        return cursor;
+    }
+
+    @Override
+    public int update(Uri uri, ContentValues values, String selection,
+                      String[] selectionArgs) {
+        // TODO: Implement this to handle requests to update one or more rows.
+        throw new UnsupportedOperationException("Not yet implemented");
     }
 }

@@ -3,6 +3,7 @@ package com.example.alvindrakes.my_fitness_tracker;
 import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
+import android.database.sqlite.SQLiteException;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
@@ -19,15 +20,11 @@ public class DetailsPage extends AppCompatActivity {
 
     private final String tag = "TRACKER DETAILS";
 
-    Bundle bundle;
-    ArrayList<float[]> allDistances;
-    ArrayList<float[]> allDurations;
-    long timeTakenNow;
-    int numMarkers;
+    String runDistance;
+    long runTime;
 
+    TextView avgSpeed, tv_totalDistance, tv_timeTaken;
     Context context = this;
-
-    TextView avgSpeed, totalDistance, timeTaken;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -35,43 +32,47 @@ public class DetailsPage extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_details_page);
 
-        bundle = getIntent().getExtras();
-        getAllInfo();
-        Log.i(tag, "number of markers: " + numMarkers);
-
         avgSpeed = (TextView) findViewById(R.id.AvgSpeed);
-        totalDistance = (TextView) findViewById(R.id.TotalDistance);
-       // timeTaken = (TextView) findViewById(R.id.timeTaken);
+        tv_totalDistance = (TextView) findViewById(R.id.TotalDistance);
+        tv_timeTaken = (TextView) findViewById(R.id.timeTaken);
 
         MyDBOpenHelper dbHandler = new MyDBOpenHelper(this, null, null, 1);
 
         TableLayout tableLayout = findViewById(R.id.tablelayout);
 
-
-        // set data for cardview
-        totalDistance.setText("    Total distance: " + totalDistances(allDistances.get(allDistances.size() - 1)) + "m");
-        avgSpeed.setText("    Average speed: " + avgSpeed(allDistances.get(allDistances.size() - 1), allDurations.get(allDistances.size() - 1)) + " m/s");
-       // timeTaken.setText("     Time Taken: " + timeTakenNow);
-
+        // add header rows for the table
         addHeaderRow(tableLayout);
 
+
+        // read data from database and add them into the table
         SQLiteDatabase db = dbHandler.getReadableDatabase();
+        db.beginTransaction();
 
-        Cursor cursor = db.query("tracker", null, null, null, null, null, null, null);
+        try {
 
+            //get all logs
+            String selectQuery = "SELECT * FROM " + MyDBOpenHelper.TABLE_TRACKERLOG;
+            Cursor cursor = db.rawQuery(selectQuery, null);
+            if (cursor.getCount() > 0) {
+                while (cursor.moveToNext()) {
 
-        // So this is the one causing the issue here !!!!!!
-        if (cursor.moveToFirst()) {
+                    // Read columns data
+                   runDistance  = cursor.getString(cursor.getColumnIndex("distance"));
+                   runTime = cursor.getLong(cursor.getColumnIndex("time"));
 
-                    String runDistance = totalDistances(allDistances.get(allDistances.size() - 1)) + "m";
-                    String runAvgSpeed = avgSpeed(allDistances.get(allDistances.size() - 1), allDurations.get(allDistances.size() - 1)) + " m/s";
-                    String runTime = Long.toString(timeTakenNow);
+                    //format time to string to be displayed
+                    long Seconds = (int) (runTime / 1000);
+                    long Minutes = Seconds / 60;
+                    Seconds = Seconds % 60;
+                    long MilliSeconds = (int) (runTime % 1000);
+                    String runTimetxt = "" + Minutes + ":" + String.format("%02d", Seconds) + ":" + String.format("%03d", MilliSeconds);
 
+                    // data rows information
                     TableRow row = new TableRow(context);
                     row.setLayoutParams(new TableLayout.LayoutParams(TableLayout.LayoutParams.MATCH_PARENT,
                             TableLayout.LayoutParams.WRAP_CONTENT));
 
-                    String[] colText = {runDistance, runAvgSpeed, runTime};
+                    String[] colText = {runDistance, runTimetxt};
                     for (String text : colText) {
                         TextView tv = new TextView(this);
                         tv.setLayoutParams(new TableRow.LayoutParams(TableRow.LayoutParams.WRAP_CONTENT,
@@ -83,8 +84,24 @@ public class DetailsPage extends AppCompatActivity {
                         row.addView(tv);
                     }
                     tableLayout.addView(row);
-                //while (cursor.moveToNext());
+                }
+
+                // set data for cardview
+                tv_totalDistance.setText("    Total distance: " + runDistance);
+                // avgSpeed.setText("    Average speed: " + avgSpeed(allDistances.get(allDistances.size() - 1), allDurations.get(allDistances.size() - 1)) + " m/s");
+                tv_timeTaken.setText("     Time Taken: " + runTime);
             }
+            db.setTransactionSuccessful();
+
+        } catch (SQLiteException e) {
+            e.printStackTrace();
+
+        } finally {
+            db.endTransaction();
+            // End the transaction.
+            db.close();
+            // Close database
+        }
     }
 
     private void addHeaderRow(TableLayout tableLayout) {
@@ -104,55 +121,14 @@ public class DetailsPage extends AppCompatActivity {
             rowHeader.addView(tv);
         }
         tableLayout.addView(rowHeader);
-
     }
 
-
-    //get all information sent from main activity
-    private void getAllInfo() {
-
-        numMarkers = bundle.getInt("numMarkers");
-        allDistances = new ArrayList<>();
-        allDurations = new ArrayList<>();
-
-        for(int i = 0; i < numMarkers; i++) {
-            allDistances.add(bundle.getFloatArray("distance " + i));
-            allDurations.add(bundle.getFloatArray("duration " + i));
-        }
-    }
 
     //calculate average speed
-    private float avgSpeed(float[] distances,float[] durations) {
-        return totalDistances(distances) / totalDuration(durations);
-    }
+//    private float avgSpeed(float[] distances,float[] durations) {
+//        return totalDistances(distances) / totalDuration(durations);
+//    }
 
-
-    //get the total move distance
-    private float totalDistances(float[] distances) {
-
-        float totalDistance = 0;
-
-        if(distances != null) {
-            for(int i = 0; i < distances.length; i++) {
-                totalDistance += distances[i];
-            }
-        }
-        return totalDistance;
-    }
-
-    //get speeds at all time stamps
-    private float totalDuration(float[] durations) {
-
-        float totalDuration = 0;
-
-        if(durations != null) {
-            for(int i = 0; i < durations.length; i++) {
-                totalDuration += durations[i];
-            }
-        }
-
-        return totalDuration;
-    }
 
     // destroy detailsPage activity and go back to mainPage
     public void backToMain(View v) {

@@ -1,6 +1,10 @@
 package com.example.alvindrakes.my_fitness_tracker;
 
 import android.Manifest;
+import android.app.Notification;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
 import android.app.Service;
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;
@@ -10,6 +14,10 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
+import android.database.Cursor;
+import android.database.sqlite.SQLiteDatabase;
+import android.location.Location;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
@@ -17,6 +25,7 @@ import android.os.SystemClock;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
 import android.support.v4.app.ActivityCompat;
+import android.support.v4.app.NotificationCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v4.content.LocalBroadcastManager;
 import android.support.v7.app.AlertDialog;
@@ -33,21 +42,21 @@ import android.widget.Toast;
 public class MainActivity extends AppCompatActivity {
 
     //indicate which period of running it is
-    public static int MARKER;
     private final String tag = "MAIN TRACKER";
 
-    TrackerService.TrackerBinder binder;
-
     private Intent intent;
-    ServiceConnection trackerConnection = null;
+    TrackerService trackerService;
 
     Boolean isBound;
     Boolean isTracking = false;
+    Boolean isActive = false;
 
     private FloatingActionButton startBtn, stopBtn, detailsBtn, pauseBtn;
-    TextView tv_Time;
+    TextView tv_Time, tv_Distance;
 
-    public long timeTaken = 0L;
+    Location location, oLocation;
+    float distanceTaken, totalDistance = (float) 0.00;
+
 
     //time recording runnable process
     long MillisecondTime, StartTime, TimeBuff, UpdateTime = 0L;
@@ -73,16 +82,38 @@ public class MainActivity extends AppCompatActivity {
 
     };
 
+    private NotificationManager notificationManager;
+    //ServiceConnection for service
+    private ServiceConnection myConnection = new ServiceConnection() {
+        //Bind Service
+        @Override
+        public void onServiceConnected(ComponentName componentName, IBinder service) {
+            TrackerService.mBinder binder = (TrackerService.mBinder) service;
+            trackerService = binder.getService();
+            isBound = true;
+        }
+
+        @Override
+        public void onServiceDisconnected(ComponentName componentName) {
+            isBound = false;
+        }
+    };
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            notificationManager = getSystemService(NotificationManager.class); //assign notification manager to system
+        }
 
         startBtn = (FloatingActionButton) findViewById(R.id.start);
         pauseBtn = (FloatingActionButton) findViewById(R.id.pause);
         stopBtn = (FloatingActionButton) findViewById(R.id.stop);
         detailsBtn = (FloatingActionButton) findViewById(R.id.details);
         tv_Time = findViewById(R.id.tv_Time);
+        tv_Distance = findViewById(R.id.tv_Distance);
 
         handler = new Handler();
         intent = new Intent(this, TrackerService.class);
@@ -101,10 +132,17 @@ public class MainActivity extends AppCompatActivity {
                 stopBtn.show();
                 pauseBtn.show();
 
+                //if not paused
+                if (!isActive) {
+                    tv_Distance.setText("0.00m"); //if starting new log, reset distance textView
+                    isActive = true; //set status to ACTIVE (currently tracking)
+                }
+
                 //press start button to connect to the service
-                connectTrackerService();
                 Toast.makeText(getApplicationContext(), "Tracker recording starts", Toast.LENGTH_SHORT).show();
                 Log.d(tag, "recording has started");
+                createNotification();
+                oLocation = location; //set start location to current location
             }
         });
 
@@ -119,10 +157,9 @@ public class MainActivity extends AppCompatActivity {
                handler.removeCallbacks(runnable); //stop runnable
 
                isTracking = false; //set status to NOT TRACKING
+               createNotification();
 
                Toast.makeText(getApplicationContext(), "Tracker recording pauses", Toast.LENGTH_SHORT).show();
-
-
            }
         });
 
@@ -135,20 +172,14 @@ public class MainActivity extends AppCompatActivity {
                 pauseBtn.hide();
                 stopBtn.hide();
 
-                //disconnect to the service
-                unbindService(trackerConnection);
-                stopService(intent);
-                trackerConnection = null;
-                //binder = null;
-                Toast.makeText(getApplicationContext(), "Tracker recording stops", Toast.LENGTH_SHORT).show();
-                Log.d(tag, "recording has stopped, current marker: " + MARKER);
-
-                timeTaken = UpdateTime;
-
-                Toast.makeText(MainActivity.this, "timetaken" + timeTaken, Toast.LENGTH_SHORT).show();
+                MyDBOpenHelper dbHandler = new MyDBOpenHelper(getBaseContext(), null, null, 1); //call database helper
+                TrackerLog trackerLog = new TrackerLog(tv_Distance.getText().toString(), UpdateTime); //create new record TrackerLog
+                dbHandler.addLog(trackerLog); //add new log to database
+                Log.d(tag, "Log saved");
 
                 // reset variables value
                 tv_Time.setText("");
+                tv_Distance.setText("");
 
                 MillisecondTime = 0L;
                 StartTime = 0L;
@@ -160,62 +191,18 @@ public class MainActivity extends AppCompatActivity {
 
                 //set status to NOT TRACKING and NOT ACTIVE
                 isTracking = false;
+                isActive = false;
             }
         });
 
         detailsBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-
-                if(binder != null) {
-                    //send bundle to the details activity
-                    int numMarkers = binder.getLastMarkers();
-                    Intent detailsIntent = new Intent(MainActivity.this, DetailsPage.class);
-                    Bundle bundle = new Bundle();
-                    bundle.putInt("numMarkers", numMarkers);
-                    Log.i(tag, "current Marker number: " + numMarkers);
-
-                    for(int i = 0; i < numMarkers; i++) {
-                        bundle.putFloatArray("distance " + i, binder.calculateDistances(i+1));
-                        bundle.putFloatArray("duration " + i, binder.calculateDurations(i+1));
-                        bundle.putLong("time ", binder.getTimeTaken(UpdateTime));
-                    }
-
-                    detailsIntent.putExtras(bundle);
-                    startActivity(detailsIntent);
-                } else {
-                    Toast.makeText(MainActivity.this, "No running record yet", Toast.LENGTH_SHORT).show();
-                }
+                Intent detailsIntent = new Intent(MainActivity.this, DetailsPage.class);
+                startActivity(detailsIntent);
             }
         });
     }
-
-
-    //connect to the tracker service
-    private void connectTrackerService() {
-
-        if(trackerConnection == null) {
-
-            trackerConnection = new ServiceConnection() {
-                @Override
-                public void onServiceConnected(ComponentName name, IBinder service) {
-                    binder = (TrackerService.TrackerBinder)service;
-                    MARKER = binder.getLastMarkers()+1;
-                    isBound = true;
-                    Log.d(tag, "Tracker service is connected");
-                }
-
-                @Override
-                public void onServiceDisconnected(ComponentName name) {
-                    isBound = false;
-                    Log.d(tag, "Service is disconnected");
-                }
-            };
-
-            bindService(intent, trackerConnection, Service.BIND_AUTO_CREATE);
-        }
-    }
-
 
     // check whether location permission is granted
     public boolean checkLocationPermission() {
@@ -298,13 +285,73 @@ public class MainActivity extends AppCompatActivity {
     }
 
 
+    //function to send notification
+    public void createNotification() {
+        Intent intent = getIntent();
+        PendingIntent pendingIntent = PendingIntent.getActivity(getApplicationContext(), (int) System.currentTimeMillis(), intent, PendingIntent.FLAG_UPDATE_CURRENT);
+
+        //notification channel created to support android SDK 26+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            NotificationChannel notificationChannel = new NotificationChannel("runningTracker", "RunningTracker", notificationManager.IMPORTANCE_LOW);
+            notificationManager.createNotificationChannel(notificationChannel);
+        }
+
+        Notification notif = new NotificationCompat.Builder(this, "runningTracker")
+                .setSmallIcon(R.drawable.ic_launcher_background)
+                .setContentTitle("RunningTracker")
+                .setContentText(isTracking ? "Tracking" : "Paused")
+                .setPriority(NotificationCompat.PRIORITY_LOW)
+                .setContentIntent(pendingIntent)
+                .setOngoing(true)
+                .build();
+
+        notificationManager.notify(1, notif); //send notification
+
+    }
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+
+        Log.d(tag, "Starting service");
+
+        //bind service
+        intent = new Intent(this, TrackerService.class);
+        bindService(intent, myConnection, Context.BIND_AUTO_CREATE);
+
+        //check if location permission is granted
+        if (checkLocationPermission()) {
+
+            //Broadcast receiver everytime location is updated
+            LocalBroadcastManager.getInstance(this).registerReceiver(
+                    new BroadcastReceiver() {
+                        @Override
+                        public void onReceive(Context context, Intent intent) {
+                            location = intent.getExtras().getParcelable("loc");
+                            try {
+                                //if status is TRACKING, calculate new distance and display
+                                if (isTracking) {
+                                    distanceTaken = oLocation.distanceTo(location);
+                                    oLocation = location;
+                                    totalDistance = distanceTaken + totalDistance;
+                                    String distance = String.format("%.2f", totalDistance);
+                                    tv_Distance.setText(distance + "m");
+                                }
+                            } catch (Exception e) {
+                            }
+                        }
+                    }
+                    , new IntentFilter("LocationBroadcastService"));
+            startService(intent);
+        }
+    }
+
     // android lifecycle checking
     @Override
     protected void onDestroy() {
         super.onDestroy();
 
         //stop service when activity is destroyed
-        unbindService(trackerConnection);
         stopService(intent);
         handler.removeCallbacks(runnable);
         Log.d(tag, "onDestroy");
@@ -322,16 +369,19 @@ public class MainActivity extends AppCompatActivity {
         Log.d(tag, "onResume");
     }
 
-    @Override
-    protected void onStart() {
-        super.onStart();
-        checkLocationPermission();
-        Log.d(tag, "onStart");
-    }
 
     @Override
     protected void onStop() {
         super.onStop();
         Log.d(tag, "onStop");
     }
+
+    @Override
+    public void onBackPressed() {
+        super.onBackPressed();
+
+        //do not destroy app when back button is pressed
+        moveTaskToBack(true);
+    }
+
 }

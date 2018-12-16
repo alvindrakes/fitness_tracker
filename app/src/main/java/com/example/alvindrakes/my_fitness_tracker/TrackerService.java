@@ -1,5 +1,6 @@
 package com.example.alvindrakes.my_fitness_tracker;
 
+import android.annotation.SuppressLint;
 import android.app.Service;
 import android.content.ContentResolver;
 import android.content.ContentValues;
@@ -13,182 +14,58 @@ import android.location.LocationManager;
 import android.os.Binder;
 import android.os.Bundle;
 import android.os.IBinder;
+import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
 
-import com.example.alvindrakes.my_fitness_tracker.ContentProvider.MyProviderContract;
-
-public class TrackerService extends Service {
-
-    Context mContext;
-    private SQLiteDatabase db;
-    private MyDBOpenHelper myDBHelper;
-    private ContentResolver resolver;
+public class TrackerService extends Service implements LocationListener {
 
     private final String TAG = "TRACKER SERVICE";
-    private TrackerBinder binder = new TrackerBinder();
+    private final Binder mBind = new mBinder();
 
-    int lastMarkers = 0;
-    private double[] currentLocationData = new double[2];
 
-    LocationManager locationManager;
-    MyLocationListener locationListener;
+    public TrackerService() {
+    }
 
     @Override
-    public void onCreate() {
-
-        super.onCreate();
-
-        resolver = this.getContentResolver();
-
-        mContext = TrackerService.this;
-        myDBHelper = new MyDBOpenHelper(mContext, "my.db", null, 1);
-        db = myDBHelper.getWritableDatabase();
-
-        // activate the location listener when there is movement
-        locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
-        locationListener = new MyLocationListener();
-
-        try{
-            locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 500, 1, locationListener);
-        }catch(SecurityException se) {
-            Log.i(TAG, se.toString());
-        }
-
-        Log.i(TAG, "onCreate");
+    public IBinder onBind(Intent intent) {
+        Log.d(TAG, "onBind");
+        return mBind;
     }
 
-    public class TrackerBinder extends Binder {
+    @SuppressLint("MissingPermission")
+    @Override
+    public int onStartCommand(Intent intent, int flags, int startId) {
 
-        public int getLastMarkers() {
-            return lastMarkers();
+        //initialise location manager and listener
+        LocationManager locationManager =
+                (LocationManager) getSystemService(Context.LOCATION_SERVICE);
+        TrackerService locationListener = new TrackerService();
+
+
+        try {
+            locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER,
+                    5, // minimum time interval between updates
+                    5, // minimum distance between updates, in metres
+                    locationListener);
+        } catch (SecurityException e) {
         }
+        return START_STICKY;
+    }
 
-        //get all records in the database for some period of running
-        public Location[] getMarkedLocations(int marker) {
-
-            int i = 0;
-            int markedRecord = getCount(marker);
-            double[][] locationInfo = new double[markedRecord][2];
-            long[] timeStamps = new long[markedRecord];
-            Location[] locations = new Location[markedRecord];
-
-            Cursor cursor = resolver.query(MyProviderContract.URI.ID_QUERY, null, "trackerMarker = ?", new String[]{String.valueOf(marker)}, null);
-            if(cursor.moveToFirst()) {
-                do{
-                    //package the latitude, longitude and time into a location object
-                    locationInfo[i][0] = cursor.getDouble(cursor.getColumnIndex("trackerLatitude"));
-                    locationInfo[i][1] = cursor.getDouble(cursor.getColumnIndex("trackerLongitude"));
-                    timeStamps[i] = cursor.getLong(cursor.getColumnIndex("trackerTime"));
-                    locations[i] = coordinateToLocation(locationInfo[i][0], locationInfo[i][1], timeStamps[i]);
-                    i++;
-                }while(cursor.moveToNext());
-            }
-            cursor.close();
-
-            return locations;
-        }
-
-        //calculate distances between two locations sequentially in some period
-        public float[] calculateDistances(int marker) {
-
-            Location[] markedLocations = getMarkedLocations(marker);
-            float[] distances = new float[markedLocations.length-1];
-
-            for(int i = 0; i < distances.length; i++) {
-                distances[i] = getDistance(markedLocations[i], markedLocations[i+1]);
-            }
-
-            return distances;
-        }
-
-        //calculate time differences between two locations sequentially in some period
-        public float[] calculateDurations(int marker) {
-
-            Location[] markedLocations = getMarkedLocations(marker);
-            float[] durations = new float[markedLocations.length-1];
-
-            for(int i = 0; i < durations.length; i++) {
-                durations[i] = getDuration(markedLocations[i], markedLocations[i+1]);
-            }
-
-            return durations;
-        }
-        //package a location with the saved latitude, longitude and durations
-        private Location coordinateToLocation(double latitude, double longitude, long time) {
-
-            Location location = new Location("point");
-            location.setLatitude(latitude);
-            location.setLongitude(longitude);
-            location.setTime(time);
-
-            return location;
-        }
-
-
-        //get the marker of last record in the database
-        public int lastMarkers() {
-
-            Cursor cursor = db.rawQuery("select * from tracker order by trackerId desc limit 0,1", null);
-            if(cursor.moveToFirst()) {
-                lastMarkers = cursor.getInt(cursor.getColumnIndex("trackerMarker"));
-            }
-
-            return lastMarkers;
-        }
-
-        public long getTimeTaken(long time) {
-            return time;
-        }
-
-        //get how many records for a period of running marked by the marker
-        private int getCount(int marker) {
-
-            int result = 0;
-            Cursor cursor = db.rawQuery("SELECT Count (*) FROM tracker where trackerMarker = ?", new String[]{String.valueOf(marker)});
-            if(cursor.moveToFirst())
-                result = cursor.getInt(0);
-            cursor.close();
-
-            return result;
-        }
-
-        //get distances between two different locations
-        private float getDistance(Location lastLocation, Location curLocation) {
-            return curLocation.distanceTo(lastLocation);
-        }
-
-        //get durations durations between two different locations
-        private float getDuration(Location lastLocation, Location curLocation) {
-            return (curLocation.getTime() - lastLocation.getTime()) / 1000;
+    public class mBinder extends Binder {
+        TrackerService getService() {
+            return TrackerService.this;
         }
     }
 
-    //implement the location listener
-    private class MyLocationListener implements LocationListener {
-
-        @Override
+    @Override
         public void onLocationChanged(Location location) {
+            Log.d(TAG, "Location changed");
 
-            Intent locationIntent = new Intent();
-            locationIntent.setAction("com.example.alvindrakes.fitnesstracker.MY_LOCATION_RECEIVER");
-
-            currentLocationData[0] = location.getLatitude();
-            currentLocationData[1] = location.getLongitude();
-            long curTime = location.getTime();
-
-            //send the broadcast, current location information included
-            locationIntent.putExtra("locationData", currentLocationData);
-            sendBroadcast(locationIntent);
-
-            //insert the all new location data into the database
-            ContentValues insertValues = new ContentValues();
-            insertValues.put("trackerMarker", MainActivity.MARKER);
-            insertValues.put("trackerLatitude", currentLocationData[0]);
-            insertValues.put("trackerLongitude", currentLocationData[1]);
-            insertValues.put("trackerTime", curTime);
-            insertValues.put("trackerLocation", location.toString());
-            resolver.insert(MyProviderContract.URI.ID_INSERT, insertValues);
-
+            //broadcast new location
+            Intent i = new Intent("LocationBroadcastService");
+            i.putExtra("loc", location);
+            LocalBroadcastManager.getInstance(this).sendBroadcast(i);
         }
 
         @Override
@@ -203,36 +80,6 @@ public class TrackerService extends Service {
 
         @Override
         public void onProviderDisabled(String provider) {
-            locationManager = null;
-            locationListener = null;
             Log.d(TAG, "onProviderDisabled: " + provider);
         }
-    }
-
-    @Override
-    public IBinder onBind(Intent intent) {
-        Log.d(TAG, "onBind");
-        return binder;
-    }
-
-    @Override
-    public boolean onUnbind(Intent intent) {
-        super.onUnbind(intent);
-        //stop updating when the service is stopped
-        locationManager.removeUpdates(locationListener);
-        Log.d(TAG, "onUnbind");
-        return true;
-    }
-
-    @Override
-    public void onDestroy() {
-        super.onDestroy();
-        Log.d(TAG, "onDestroy");
-    }
-
-    @Override
-    public void onRebind(Intent intent) {
-        super.onRebind(intent);
-        Log.d(TAG, "onRebind");
-    }
 }

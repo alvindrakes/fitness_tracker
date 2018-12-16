@@ -26,7 +26,7 @@
 
         <provider
             android:name=".ContentProvider.MyContentProvider"
-            android:authorities="com.example.alvindrakes.trackerprovider">
+            android:authorities="com.example.alvindrakes.my_fitness_tracker.ContentProvider.MyContentProvider">
         </provider>
 
         <receiver android:name=".TrackerReceiver">

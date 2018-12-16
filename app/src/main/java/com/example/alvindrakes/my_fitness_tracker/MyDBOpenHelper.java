@@ -1,39 +1,50 @@
 package com.example.alvindrakes.my_fitness_tracker;
 
+import android.content.ContentResolver;
+import android.content.ContentValues;
 import android.content.Context;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.util.Log;
 
-import java.util.Date;
-
+import com.example.alvindrakes.my_fitness_tracker.ContentProvider.MyContentProvider;
 
 public class MyDBOpenHelper extends SQLiteOpenHelper {
 
-    private final String tag = "DATABASE HELPER";
+    public static final String TAG = "RunningTrackerDB";
 
-    Date date = new Date(System.currentTimeMillis());
+    public static final String TABLE_TRACKERLOG = "trackerlog";
+    public static final String COLUMN_DISTANCE = "distance";
+    public static final String COLUMN_TIME = "time";
+    private static final int DATABASE_VERSION = 1;
+    private static final String DATABASE_NAME = "trackerlogDB.db";
+    private ContentResolver myCR;
 
-    // create a new database
     public MyDBOpenHelper(Context context, String name, SQLiteDatabase.CursorFactory factory, int version) {
-        super(context, "my.db", null, 1);
+        super(context, DATABASE_NAME, factory, DATABASE_VERSION);
+        myCR = context.getContentResolver();
     }
 
     @Override
     public void onCreate(SQLiteDatabase db) {
-
-        db.execSQL("CREATE TABLE tracker(trackerId INTEGER PRIMARY KEY AUTOINCREMENT," +
-                "" +
-                "trackerMarker INTEGER," +
-                "trackerLatitude double," +
-                "trackerLongitude double," +
-                "trackerTime INTEGER," +
-                "trackerLocation VARCHAR(128))");
-        Log.d(tag, date.toString());
+        String CREATE_TABLE_TRACKERLOG = "CREATE TABLE " +
+                TABLE_TRACKERLOG + "("
+                + COLUMN_DISTANCE
+                + " TEXT," + COLUMN_TIME + " REAL" + ")";
+        db.execSQL(CREATE_TABLE_TRACKERLOG);
     }
 
     @Override
-    public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
+    public void onUpgrade(SQLiteDatabase db, int i, int i1) {
+        db.execSQL("DROP TABLE IF EXISTS " + TABLE_TRACKERLOG);
+        onCreate(db);
+    }
 
+    public void addLog(TrackerLog trackerlog) {
+        ContentValues values = new ContentValues();
+        values.put(COLUMN_DISTANCE, trackerlog.getDistance());
+        values.put(COLUMN_TIME, trackerlog.getTime());
+        myCR.insert(MyContentProvider.CONTENT_URI, values);
+        Log.d(TAG, "New log added");
     }
 }
