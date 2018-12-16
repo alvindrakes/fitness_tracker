@@ -29,13 +29,6 @@
             android:authorities="com.example.alvindrakes.my_fitness_tracker.ContentProvider.MyContentProvider">
         </provider>
 
-        <receiver android:name=".TrackerReceiver">
-            <intent-filter>
-                <action android:name="com.example.alvindrakes.fitnesstracker.MY_LOCATION_RECEIVER"></action>
-                <action android:name="com.example.alvindrakes.fitnesstracker.MY_MAP_RECEIVER"></action>
-            </intent-filter>
-        </receiver>
-
         <service
             android:name=".TrackerService"
             android:enabled="true"

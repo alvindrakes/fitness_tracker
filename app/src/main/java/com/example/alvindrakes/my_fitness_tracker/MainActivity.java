@@ -56,7 +56,7 @@ public class MainActivity extends AppCompatActivity {
     TextView tv_Time, tv_Distance, welcomeMsg;
 
     Location location, oriLocation;
-    float distanceTaken, totalDistance = (float) 0.00;
+    float distanceTaken, totalDistance;
 
     float Speed;
 
@@ -123,6 +123,8 @@ public class MainActivity extends AppCompatActivity {
         handler = new Handler();
         intent = new Intent(this, TrackerService.class);
 
+        totalDistance = (float) 0.00;
+
         // set the visibility of buttons and textview
         stopBtn.hide();
         pauseBtn.hide();
@@ -144,7 +146,7 @@ public class MainActivity extends AppCompatActivity {
 
 
                 if (!isActive) {
-                    tv_Distance.setText("Distance ran: 0.00m"); //if starting new log, reset distance textView
+                    tv_Distance.setText("Distance ran: 0.00m"); //reset distance count when restarting
                     isActive = true; //set status to ACTIVE (currently tracking)
                 }
 
@@ -188,6 +190,22 @@ public class MainActivity extends AppCompatActivity {
 
                 calculateSpeed();
                 addNewLog();
+
+                new AlertDialog.Builder(MainActivity.this)
+                        .setTitle("Never Give Up!")
+                        .setMessage("You have ran "
+                                + String.format("%.2f", totalDistance) + "m in "
+                                + Minutes + " mins "
+                                + String.format("%02d", Seconds) + " secs. "
+                                + "Keep improving yourself!")
+                        .setCancelable(false)
+                        .setPositiveButton("OK", new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialogInterface, int i) {
+                            }
+                        })
+                        .create()
+                        .show();
 
                 // reset variables value
                 tv_Time.setText("");
@@ -345,7 +363,7 @@ public class MainActivity extends AppCompatActivity {
         }
 
         Notification notif = new NotificationCompat.Builder(this, "runningTracker")
-                .setSmallIcon(R.drawable.ic_launcher_background)
+                .setSmallIcon(R.drawable.ic_stop)
                 .setContentTitle("RunningTracker")
                 .setContentText(isTracking ? "Tracking" : "Paused")
                 .setPriority(NotificationCompat.PRIORITY_LOW)
