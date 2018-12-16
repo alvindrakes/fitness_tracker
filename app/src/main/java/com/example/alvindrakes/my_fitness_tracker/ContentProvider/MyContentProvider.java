@@ -68,14 +68,7 @@ public class MyContentProvider extends ContentProvider {
                         String[] selectionArgs, String sortOrder) {
         SQLiteQueryBuilder queryBuilder = new SQLiteQueryBuilder();
         queryBuilder.setTables(MyDBOpenHelper.TABLE_TRACKERLOG);
-     //   int uriType = sURIMatcher.match(uri);
-//        switch (uriType) {
-//            case RUNLOGS:
-//                queryBuilder.appendWhere(MyDBOpenHelper.COLUMN_DATETIME + "=" + uri.getLastPathSegment());
-//                break;
-//            default:
-//                throw new IllegalArgumentException("Unknown URI");
-//        }
+
         Cursor cursor = queryBuilder.query(myDB.getReadableDatabase(), projection, selection, selectionArgs, null, null, sortOrder);
         cursor.setNotificationUri(getContext().getContentResolver(), uri);
         return cursor;

@@ -15,8 +15,8 @@ public class TrackerLog {
     public TrackerLog() {
     }
 
-    public TrackerLog(String disstance, String speed, long time) {
-        this.distance = disstance;
+    public TrackerLog(String distance, String speed, long time) {
+        this.distance = distance;
         this.time = time;
         this.speed = speed;
     }

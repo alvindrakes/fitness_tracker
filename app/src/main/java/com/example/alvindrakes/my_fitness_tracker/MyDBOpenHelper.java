@@ -11,7 +11,7 @@ import com.example.alvindrakes.my_fitness_tracker.ContentProvider.MyContentProvi
 
 public class MyDBOpenHelper extends SQLiteOpenHelper {
 
-    public static final String TAG = "RunningTrackerDB";
+    public static final String TAG = "TrackerLogDB";
 
     public static final String TABLE_TRACKERLOG = "trackerlog";
     public static final String COLUMN_SPEED = "speed";
