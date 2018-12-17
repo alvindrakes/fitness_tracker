@@ -54,7 +54,8 @@ public class MainActivity extends AppCompatActivity {
     TextView tv_Time, tv_Distance, welcomeMsg;
 
     Location location, oriLocation;
-    float distanceTaken, totalDistance;
+    float distanceTaken;
+    float totalDistance = (float) 0.00;
 
     float Speed;
 
@@ -124,8 +125,6 @@ public class MainActivity extends AppCompatActivity {
         handler = new Handler();
         intent = new Intent(this, TrackerService.class);
 
-        totalDistance = (float) 0.00;
-
         // set the visibility of buttons and textview
         stopBtn.hide();
         pauseBtn.hide();
@@ -137,6 +136,8 @@ public class MainActivity extends AppCompatActivity {
                 StartTime = SystemClock.uptimeMillis(); // get current system uptime
                 handler.postDelayed(runnable, 0);
                 isTracking = true;
+
+                totalDistance = (float) 0.00;  // reset total distance ran when new tracking start
 
                 startBtn.hide();
                 stopBtn.show();
